@@ -1,0 +1,173 @@
+{
+  "scheduling_period": {
+    "month": "2024-11"
+  },
+  "developers": [
+    {
+      "DeveloperID": 1,
+      "Name": "João Silva",
+      "Level": "Sênior",
+      "CostPerHour": 200
+    },
+    {
+      "DeveloperID": 2,
+      "Name": "Maria Oliveira",
+      "Level": "Sênior",
+      "CostPerHour": 200
+    },
+    {
+      "DeveloperID": 3,
+      "Name": "Carlos Souza",
+      "Level": "Pleno",
+      "CostPerHour": 100
+    },
+    {
+      "DeveloperID": 4,
+      "Name": "Ana Pereira",
+      "Level": "Pleno",
+      "CostPerHour": 100
+    },
+    {
+      "DeveloperID": 5,
+      "Name": "Pedro Lima",
+      "Level": "Pleno",
+      "CostPerHour": 100
+    },
+    {
+      "DeveloperID": 6,
+      "Name": "Lucas Santos",
+      "Level": "Junior",
+      "CostPerHour": 50
+    },
+    {
+      "DeveloperID": 7,
+      "Name": "Julia Costa",
+      "Level": "Junior",
+      "CostPerHour": 50
+    },
+    {
+      "DeveloperID": 8,
+      "Name": "Mariana Rocha",
+      "Level": "Junior",
+      "CostPerHour": 50
+    },
+    {
+      "DeveloperID": 9,
+      "Name": "Thiago Martins",
+      "Level": "Junior",
+      "CostPerHour": 50
+    }
+  ],
+  "deploys": [
+    {
+      "DeployID": 1,
+      "Date": "2024-10-07",
+      "Time": "03:00",
+      "DurationHours": 1
+    },
+    {
+      "DeployID": 2,
+      "Date": "2024-10-09",
+      "Time": "03:00",
+      "DurationHours": 1
+    }
+  ],
+  "weekly_constraints": [
+    {
+      "DeveloperID": 1,
+      "MinimumWeeklyHours": 40,
+      "MaximumWeeklyHours": 52,
+      "MinimumWeeklyDaysOff": 1
+    },
+    {
+      "DeveloperID": 2,
+      "MinimumWeeklyHours": 40,
+      "MaximumWeeklyHours": 52,
+      "MinimumWeeklyDaysOff": 1
+    },
+    {
+      "DeveloperID": 3,
+      "MinimumWeeklyHours": 40,
+      "MaximumWeeklyHours": 52,
+      "MinimumWeeklyDaysOff": 1
+    },
+    {
+      "DeveloperID": 4,
+      "MinimumWeeklyHours": 40,
+      "MaximumWeeklyHours": 52,
+      "MinimumWeeklyDaysOff": 1
+    },
+    {
+      "DeveloperID": 5,
+      "MinimumWeeklyHours": 40,
+      "MaximumWeeklyHours": 52,
+      "MinimumWeeklyDaysOff": 1
+    },
+    {
+      "DeveloperID": 6,
+      "MinimumWeeklyHours": 40,
+      "MaximumWeeklyHours": 52,
+      "MinimumWeeklyDaysOff": 1
+    },
+    {
+      "DeveloperID": 7,
+      "MinimumWeeklyHours": 40,
+      "MaximumWeeklyHours": 52,
+      "MinimumWeeklyDaysOff": 1
+    },
+    {
+      "DeveloperID": 8,
+      "MinimumWeeklyHours": 40,
+      "MaximumWeeklyHours": 52,
+      "MinimumWeeklyDaysOff": 1
+    },
+    {
+      "DeveloperID": 9,
+      "MinimumWeeklyHours": 40,
+      "MaximumWeeklyHours": 52,
+      "MinimumWeeklyDaysOff": 1
+    }
+  ],
+  "constraints_rules": {
+    "OvertimeRate": 1.5,
+    "OnCallRate": 0.5,
+    "JuniorMaxOnCallHours": 0,
+    "JuniorWorkingHours": {
+      "Start": "08:00",
+      "End": "17:00"
+    },
+    "MinimumSupportDuringActiveHours": {
+      "PlenosRequired": 2,
+      "SeniorsRequired": 1
+    },
+    "MaxConsecutiveOnCallDays": 1,
+    "MandatoryRestAfterOnCallHours": 12
+  },
+  "additional_constraints": {
+    "coverage_24x7": true,
+    "active_hours": {
+      "start": "08:00",
+      "end": "17:00",
+      "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    },
+    "weekend_coverage": {
+      "developers_required_per_day": 1,
+      "max_on_call_hours_per_developer": 24
+    },
+    "deploy_shifts": {
+      "only_seniors": true,
+      "deploy_times": [
+        {
+          "Date": "2024-10-07",
+          "Time": "03:00",
+          "DurationHours": 1
+        },
+        {
+          "Date": "2024-10-09",
+          "Time": "03:00",
+          "DurationHours": 1
+        }
+      ]
+    }
+  }
+}

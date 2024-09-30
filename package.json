@@ -1,0 +1,21 @@
+{
+  "name": "po-2",
+  "version": "1.0.0",
+  "main": "index.js",
+"scripts": {
+  "start": "node src/index.js"
+},
+
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "glpk.js": "^4.0.2",
+    "pdfkit": "^0.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "@types/pdfkit": "^0.13.5"
+  }
+}
