@@ -45,17 +45,20 @@ function generateGLPKModel(inputData, GLPK) {
 
   // Função para verificar se um desenvolvedor pode trabalhar em determinado dia e hora
   function canWork(dev, day, hour) {
-    // Verificar restrições de júnior
+    // Verificar se é Sábado ou Domingo (finais de semana)
+    if (day > 5) {
+      // Nos finais de semana, apenas sobreaviso
+      return dev.Level !== "Junior"; // Apenas Pleno ou Sênior podem estar de sobreaviso
+    }
+
+    // Verificar restrições de júnior durante a semana
     if (dev.Level === "Junior") {
-      if (day > 5) {
-        // Sábado e Domingo
-        return false;
-      }
       if (hour < 8 || hour >= 17) {
         // Fora do horário comercial
         return false;
       }
     }
+
     return true;
   }
 
@@ -194,7 +197,7 @@ function generateGLPKModel(inputData, GLPK) {
     }
   }
 
-  // 4. Finais de Semana: 1 desenvolvedor por dia (24h)
+  // 4. Finais de Semana: Apenas sobreaviso, sem horário comercial, e apenas 1 desenvolvedor por hora
   for (let day = 6; day <= 7; day++) {
     // Sábado e Domingo
     for (let hour = 0; hour < 24; hour++) {
@@ -202,14 +205,14 @@ function generateGLPKModel(inputData, GLPK) {
         name: `weekend_coverage_D${day}_H${hour}`,
         vars: [],
         bnds: {
-          type: GLPK.GLP_LO,
+          type: GLPK.GLP_FX, // Precisamos exatamente de 1 desenvolvedor no sobreaviso
           lb: 1,
-          ub: 0,
+          ub: 1,
         },
       };
 
       developers.forEach((dev) => {
-        // Desenvolvedores juniores não podem trabalhar nos finais de semana
+        // Apenas plenos e sêniores podem trabalhar no sobreaviso
         if (dev.Level !== "Junior") {
           const varName = `x_${dev.DeveloperID}_D${day}_H${hour}`;
           constraint.vars.push({ name: varName, coef: 1 });
