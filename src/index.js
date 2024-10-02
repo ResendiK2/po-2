@@ -22,64 +22,39 @@ function generateGLPKModel(inputData, GLPK) {
   } = inputData;
 
   // Definir as variáveis de decisão
-  // x_{DeveloperID}_{Day}_{Hour} = 1 se o desenvolvedor está trabalhando naquela hora, 0 caso contrário
-
-  // Mapeamento de dias para números
-  const dayNames = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-  ];
-  const dayToNumber = {};
-  dayNames.forEach((day, index) => {
-    dayToNumber[day] = index + 1;
-  });
-
   let variables = [];
   let objectiveVars = [];
   let objectiveCoefficients = [];
 
   // Função para verificar se um desenvolvedor pode trabalhar em determinado dia e hora
   function canWork(dev, day, hour) {
-    // Verificar se é Sábado ou Domingo (finais de semana)
     if (day > 5) {
-      // Nos finais de semana, apenas sobreaviso
       return dev.Level !== "Junior"; // Apenas Pleno ou Sênior podem estar de sobreaviso
     }
-
-    // Verificar restrições de júnior durante a semana
     if (dev.Level === "Junior") {
-      if (hour < 8 || hour >= 17) {
-        // Fora do horário comercial
-        return false;
-      }
+      return hour >= 8 && hour < 17; // Juniores só podem trabalhar das 8h às 17h
     }
-
     return true;
   }
 
   // Coletar todas as variáveis e seus coeficientes
   developers.forEach((dev) => {
-    const wc = weekly_constraints.find(
-      (wc) => wc.DeveloperID === dev.DeveloperID
-    );
-    if (!wc) {
-      throw new Error(
-        `Weekly constraints not found for DeveloperID: ${dev.DeveloperID}`
-      );
-    }
-
     for (let day = 1; day <= 7; day++) {
       for (let hour = 0; hour < 24; hour++) {
         if (canWork(dev, day, hour)) {
           const varName = `x_${dev.DeveloperID}_D${day}_H${hour}`;
           variables.push(varName);
+
+          // Cálculo do custo por hora ativo, hora extra ou sobreaviso
+          if (hour >= 8 && hour < 17 && day <= 5) { // Horário ativo
+            objectiveCoefficients.push(dev.CostPerHour);
+          } else if (hour < 8 || hour >= 17) { // Horário de sobreaviso
+            objectiveCoefficients.push(dev.CostPerHour * constraints_rules.OnCallRate);
+          } else { // Hora extra
+            objectiveCoefficients.push(dev.CostPerHour * constraints_rules.OvertimeRate);
+          }
+
           objectiveVars.push(varName);
-          objectiveCoefficients.push(dev.CostPerHour);
         }
       }
     }
@@ -89,7 +64,7 @@ function generateGLPKModel(inputData, GLPK) {
   const model = {
     name: "Developer Scheduling",
     objective: {
-      direction: GLPK.GLP_MIN, // Correção: Usar GLP_MIN para minimizar custos
+      direction: GLPK.GLP_MIN,
       name: "Total_Cost",
       vars: [],
       bnds: {
@@ -99,7 +74,7 @@ function generateGLPKModel(inputData, GLPK) {
       },
     },
     subjectTo: [],
-    binaries: variables, // Variáveis binárias
+    binaries: variables,
     generals: [],
   };
 
@@ -111,7 +86,7 @@ function generateGLPKModel(inputData, GLPK) {
     });
   });
 
-  // Adicionar restrições
+  // Restrições
 
   // 1. Cobertura 24x7: cada hora deve ter pelo menos um desenvolvedor trabalhando
   for (let day = 1; day <= 7; day++) {
@@ -142,11 +117,6 @@ function generateGLPKModel(inputData, GLPK) {
     const wc = weekly_constraints.find(
       (wc) => wc.DeveloperID === dev.DeveloperID
     );
-    if (!wc) {
-      throw new Error(
-        `Weekly constraints not found for DeveloperID: ${dev.DeveloperID}`
-      );
-    }
 
     let sumHours = {
       name: `sum_hours_dev_${dev.DeveloperID}`,
@@ -170,18 +140,15 @@ function generateGLPKModel(inputData, GLPK) {
     model.subjectTo.push(sumHours);
   });
 
-  // 3. Cobertura durante Horas Ativas (08h às 17h, Segunda a Sexta)
-  // Pelo menos 2 plenos ou 1 sênior durante as horas ativas
+  // 3. Cobertura durante Horas Ativas
   for (let day = 1; day <= 5; day++) {
-    // Segunda a Sexta
     for (let hour = 8; hour < 17; hour++) {
-      // 08h às 17h
       let constraint = {
         name: `active_coverage_D${day}_H${hour}`,
         vars: [],
         bnds: {
           type: GLPK.GLP_LO,
-          lb: 2,
+          lb: constraints_rules.MinimumSupportDuringActiveHours.PlentosRequired,
           ub: 0,
         },
       };
@@ -197,22 +164,20 @@ function generateGLPKModel(inputData, GLPK) {
     }
   }
 
-  // 4. Finais de Semana: Apenas sobreaviso, sem horário comercial, e apenas 1 desenvolvedor por hora
+  // 4. Finais de Semana: Apenas sobreaviso
   for (let day = 6; day <= 7; day++) {
-    // Sábado e Domingo
     for (let hour = 0; hour < 24; hour++) {
       let constraint = {
         name: `weekend_coverage_D${day}_H${hour}`,
         vars: [],
         bnds: {
-          type: GLPK.GLP_FX, // Precisamos exatamente de 1 desenvolvedor no sobreaviso
-          lb: 1,
-          ub: 1,
+          type: GLPK.GLP_FX,
+          lb: additional_constraints.weekend_coverage.developers_required_per_day,
+          ub: additional_constraints.weekend_coverage.developers_required_per_day,
         },
       };
 
       developers.forEach((dev) => {
-        // Apenas plenos e sêniores podem trabalhar no sobreaviso
         if (dev.Level !== "Junior") {
           const varName = `x_${dev.DeveloperID}_D${day}_H${hour}`;
           constraint.vars.push({ name: varName, coef: 1 });
@@ -223,47 +188,53 @@ function generateGLPKModel(inputData, GLPK) {
     }
   }
 
-  // Outras restrições podem ser adicionadas aqui conforme necessário
+  // 5. Plantão da madrugada (apenas para seniores)
+  deploys.forEach((deploy) => {
+    const deployDay = new Date(deploy.Date).getDay();
+    const deployHour = new Date(`1970-01-01T${deploy.Time}:00`).getHours();
+
+    let constraint = {
+      name: `deploy_coverage_D${deployDay}_H${deployHour}`,
+      vars: [],
+      bnds: {
+        type: GLPK.GLP_FX,
+        lb: 1,
+        ub: 1,
+      },
+    };
+
+    developers.forEach((dev) => {
+      if (dev.Level === "Sênior") {
+        const varName = `x_${dev.DeveloperID}_D${deployDay}_H${deployHour}`;
+        constraint.vars.push({ name: varName, coef: 1 });
+      }
+    });
+
+    model.subjectTo.push(constraint);
+  });
 
   return model;
 }
 
-// Função para resolver o modelo GLPK
-async function solveGLPKModel(model, GLPK) {
-  try {
-    const result = GLPK.solve(model, GLPK.GLP_MSG_OFF);
-    return result;
-  } catch (error) {
-    console.error("Erro ao resolver o modelo GLPK:", error);
-    throw error;
-  }
+
+// Função principal para executar o modelo GLPK
+function runScheduling(filePath) {
+  const inputData = readInputData(filePath);
+
+  // Inicializar GLPK
+  const glpk = glpkModule();
+
+  const model = generateGLPKModel(inputData, glpk);
+
+  // Resolver o modelo
+  const result = glpk.solve(model);
+
+  // Gerar o relatório PDF
+  generatePDFReport(result, inputData);
+
+  console.log("Scheduling completed. Report generated.");
 }
 
-// Função principal
-async function main() {
-  try {
-    const inputFilePath = path.join(__dirname, "input_data.json");
-    const inputData = readInputData(inputFilePath);
-
-    const GLPK = await glpkModule(); // Inicializa o GLPK
-
-    const model = generateGLPKModel(inputData, GLPK);
-
-    console.log("Modelo GLPK gerado.");
-
-    const solution = await solveGLPKModel(model, GLPK);
-
-    if (solution.result.status === GLPK.GLP_OPT) {
-      console.log("Solução ótima encontrada.");
-      generatePDFReport(solution, inputData);
-    } else {
-      console.log("Não foi possível encontrar uma solução ótima.");
-      // Opcional: detalhar o status
-      console.log(`Status da solução: ${solution.result.status}`);
-    }
-  } catch (error) {
-    console.error("Erro:", error);
-  }
-}
-
-main();
+// Executar a aplicação
+const inputFilePath = path.join(__dirname, "input_data.json");
+runScheduling(inputFilePath);
